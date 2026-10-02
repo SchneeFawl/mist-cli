@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use crate::commands;
 
+use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 /// CLI for mist-shell (mist-cli)
@@ -20,8 +21,9 @@ pub enum Commands {
         #[arg(default_value = "~/.config")]
         source: PathBuf
     },
+    // Install(commands::install)
 
-    // Interactive uninstaller to remove component(s)
+    // Interactively uninstall mist-shell component(s)
     // Uninstall {},
 
     // Returns information about mist-shell

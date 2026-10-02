@@ -1,4 +1,5 @@
 # Added by cargo
 /target
+info.md
 info/
 install.sh
