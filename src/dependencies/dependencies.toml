@@ -1,0 +1,9 @@
+[[dependencies]]
+name = "hyprland"
+description = "Wayland compositor"
+source = "pacman"
+
+[[dependencies]]
+name = "ttf-roboto"
+description = "The Roboto font family"
+source = "aur"

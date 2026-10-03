@@ -1,9 +1,13 @@
 mod cli;
-mod commands;
-mod components;
+// mod commands;
+mod dependencies;
 use clap::Parser;
-use cli::{Cli, Commands};
+use cli::{Cli};
+
+use crate::dependencies::catalog::{DependencyConfig};
 
 fn main() {
-    let cli = Cli::parse();
+    let _cli = Cli::parse();
+
+    println!("{:?}", DependencyConfig::load_file());
 }

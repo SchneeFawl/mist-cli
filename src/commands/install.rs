@@ -1,5 +1,4 @@
-use std::path::Component;
+use crate::components::{self, catalog::Pacman};
 
-fn install(component: &Component) -> Result<()> {
-
+fn pacman_install(package: &Pacman) -> Result<(), std::io::Error> {
 }
