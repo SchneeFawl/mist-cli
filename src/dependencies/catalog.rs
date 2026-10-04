@@ -1,10 +1,21 @@
 use serde::{Deserialize};
 
+const CATALOG: &str = include_str!("dependencies.toml");
+
 #[derive(Deserialize, Debug, Copy, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PackageSource {
     Pacman,
     Aur
+}
+
+impl std::fmt::Display for PackageSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PackageSource::Aur => write!(f, "AUR"),
+            PackageSource::Pacman => write!(f, "pacman")
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -15,7 +26,11 @@ pub struct Dependency {
     pub source: PackageSource
 }
 
-const CATALOG: &str = include_str!("dependencies.toml");
+impl std::fmt::Display for Dependency {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} [{}] - {}", self.name, self.source, self.description)
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct DependencyConfig {
@@ -39,7 +54,7 @@ impl DependencyConfig {
             .find(|dep| dep.name == query)
     }
 
-    pub fn validate(&self) -> Result<(), CatalogError> {
+    pub fn validate(&self) -> Result<String, CatalogError> {
         let filtered = self.dependencies
             .iter()
             .find(|dep| dep.name.is_empty());
@@ -48,7 +63,7 @@ impl DependencyConfig {
             Some(_invalid_dep) => return Err(
                 CatalogError::InvalidDep("Invalid dependency name".to_string())
             ),
-            None => return Ok(())
+            None => Ok("Dependencies validated".to_string())
         }
     }
 }

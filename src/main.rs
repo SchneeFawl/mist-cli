@@ -8,11 +8,19 @@ use crate::dependencies::catalog::{DependencyConfig, PackageSource};
 
 fn main() {
     let _cli = Cli::parse();
-    let config = DependencyConfig::load().expect("dependencies.toml is either invalid or corrupted");
+    let config = DependencyConfig::load()
+        .expect("dependencies.toml is either invalid or corrupted");
 
-    println!("{:?}", DependencyConfig::find(&config, &"hyprland"));
-    config.by_source(PackageSource::Pacman)
-        .for_each(|dep| println!("{:?}", dep));
+    match config.find("hyprland") {
+        Some(dep) => println!("{}", dep),
+        None => println!("Dependency not found")
+    };
 
-    println!("{:?}", config.validate());
+    config.by_source(PackageSource::Aur)
+        .for_each(|dep| println!("{}", dep));
+
+    match config.validate() {
+        Ok(success) => println!("{success}"),
+        Err(error) => println!("{:?}", error)
+    }
 }
