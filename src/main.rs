@@ -5,6 +5,7 @@ use clap::Parser;
 use cli::{Cli};
 
 use crate::dependencies::catalog::{DependencyConfig, PackageSource};
+use crate::dependencies::installer::{is_installed};
 
 fn main() {
     let _cli = Cli::parse();
@@ -21,6 +22,8 @@ fn main() {
 
     match config.validate() {
         Ok(success) => println!("{success}"),
-        Err(error) => println!("{:?}", error)
+        Err(error) => println!("{error}")
     }
+
+    println!("hyprland installed: {:?}", is_installed(&"hyprland"));
 }

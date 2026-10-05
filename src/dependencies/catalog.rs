@@ -60,15 +60,20 @@ impl DependencyConfig {
             .find(|dep| dep.name.is_empty());
 
         match filtered {
-            Some(_invalid_dep) => return Err(
-                CatalogError::InvalidDep("Invalid dependency name".to_string())
-            ),
+            Some(_invalid_dep) => Err(CatalogError::InvalidDepName),
             None => Ok("Dependencies validated".to_string())
         }
     }
 }
 
-#[derive(Debug)]
 pub enum CatalogError {
-    InvalidDep(String)
+    InvalidDepName,
+}
+
+impl std::fmt::Display for CatalogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CatalogError::InvalidDepName => write!(f, "Invalid dependency name"),
+        }
+    }
 }
