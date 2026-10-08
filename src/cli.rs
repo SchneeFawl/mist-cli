@@ -19,11 +19,21 @@ pub enum Commands {
         #[arg(default_value = "~/.config")]
         source: PathBuf
     },
-    // Install(commands::install)
+
+    /// Dependency commands
+    Deps {
+        #[command(subcommand)]
+        command: DepsCommands
+    },
 
     // Interactively uninstall mist-shell component(s)
     // Uninstall {},
 
     // Returns information about mist-shell
     // Status {}
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DepsCommands {
+    Check
 }

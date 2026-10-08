@@ -4,6 +4,16 @@ description = "Wayland compositor"
 source = "pacman"
 
 [[dependencies]]
+name = "kitty"
+description = "Fast, feature-rich, GPU based terminal"
+source = "pacman"
+
+[[dependencies]]
 name = "ttf-roboto"
 description = "The Roboto font family"
+source = "aur"
+
+[[dependencies]]
+name = "quickshell-git"
+description = "Flexible toolkit for making desktop shells with QtQuick"
 source = "aur"

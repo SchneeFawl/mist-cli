@@ -1,16 +1,23 @@
 mod cli;
+mod commands;
 mod dependencies;
 
 use clap::Parser;
 use cli::{Cli};
 
+use crate::commands::run;
 use crate::dependencies::catalog::{DependencyConfig, PackageSource};
 use crate::dependencies::installer::{is_installed};
 
 fn main() {
-    let _cli = Cli::parse();
+    let cli = Cli::parse();
     let config = DependencyConfig::load()
         .expect("dependencies.toml is either invalid or corrupted");
+
+    match run(cli.command) {
+        Ok(result) => println!("{result}\n"),
+        Err(err) => println!("Error parsing command: {err}\n")
+    };
 
     match config.find("hyprland") {
         Some(dep) => println!("{}", dep),
@@ -21,8 +28,8 @@ fn main() {
         .for_each(|dep| println!("{}", dep));
 
     match config.validate() {
-        Ok(success) => println!("{success}"),
-        Err(error) => println!("{error}")
+        Ok(success) => println!("{success}\n"),
+        Err(error) => println!("{error}\n")
     }
 
     let deps = &config.dependencies;
