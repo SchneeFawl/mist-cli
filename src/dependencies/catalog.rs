@@ -64,6 +64,10 @@ impl DependencyConfig {
             None => Ok("Dependencies validated".to_string())
         }
     }
+
+    pub fn count(&self) -> usize {
+        self.dependencies.iter().count()
+    }
 }
 
 pub enum CatalogError {
