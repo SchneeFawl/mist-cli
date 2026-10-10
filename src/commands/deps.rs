@@ -1,12 +1,12 @@
-use crate::dependencies::{catalog::{CatalogError, DependencyConfig}, installer::is_installed};
+use crate::{
+    commands::deps::DepsError::{InvalidCatalog, TomlParse},
+    dependencies::{catalog::{CatalogError, DependencyConfig}, installer::is_installed}
+};
 
-pub fn deps_handler() -> Result<(), CatalogError> {
+pub fn deps_handler() -> Result<(), DepsError> {
     let config = match DependencyConfig::load() {
         Ok(cfg) => cfg,
-        Err(err) => {
-            eprintln!("ERROR: dependencies.toml is either invalid or corrupted:\n {err}");
-            std::process::exit(1)
-        }
+        Err(err) => return Err(DepsError::TomlParse(err))
     };
     let deps = &config.dependencies;
 
@@ -25,6 +25,21 @@ pub fn deps_handler() -> Result<(), CatalogError> {
 
             Ok(())
         },
-        Err(error) => Err(error)
+        Err(error) => return Err(DepsError::InvalidCatalog(error))
+    }
+}
+
+#[derive(Debug)]
+pub enum DepsError {
+    TomlParse(toml::de::Error),
+    InvalidCatalog(CatalogError)
+}
+
+impl std::fmt::Display for DepsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TomlParse(err) => write!(f, "Failed to parse dependencies.toml:\n {}", err),
+            InvalidCatalog(err) => write!(f, "Dependency catalog validation failed:\n {err}")
+        }
     }
 }

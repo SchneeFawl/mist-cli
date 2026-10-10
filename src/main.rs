@@ -12,6 +12,9 @@ fn main() {
 
     match run(cli.command) {
         Ok(()) => (),
-        Err(err) => eprintln!("Error parsing command: {err}\n")
+        Err(err) => {
+            eprintln!("ERROR:  {err}");
+            std::process::exit(1)
+        }
     };
 }

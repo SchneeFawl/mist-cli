@@ -71,6 +71,7 @@ impl DependencyConfig {
     }
 }
 
+#[derive(Debug)]
 pub enum CatalogError {
     InvalidDepName,
 }
