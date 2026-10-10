@@ -37,6 +37,7 @@ pub struct DependencyConfig {
     pub dependencies: Vec<Dependency>
 }
 
+#[allow(dead_code)]
 impl DependencyConfig {
     pub fn load() -> Result<Self, toml::de::Error> {
         toml::from_str(CATALOG)
