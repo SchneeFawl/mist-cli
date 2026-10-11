@@ -13,7 +13,7 @@ fn main() {
     match run(cli.command) {
         Ok(()) => (),
         Err(err) => {
-            eprintln!("ERROR:  {err}");
+            eprintln!("ERROR: {err}");
             std::process::exit(1)
         }
     };

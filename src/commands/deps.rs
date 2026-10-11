@@ -4,29 +4,22 @@ use crate::{
 };
 
 pub fn deps_handler() -> Result<(), DepsError> {
-    let config = match DependencyConfig::load() {
-        Ok(cfg) => cfg,
-        Err(err) => return Err(DepsError::TomlParse(err))
-    };
+    let config = DependencyConfig::load()?;
     let deps = &config.dependencies;
+    let validate = config.validate()?;
 
-    match config.validate() {
-        Ok(success) => {
-            println!("{success}");
-            println!("Number of dependencies: {}\n", config.count());
+    println!("{}", validate);
+    println!("Number of dependencies: {}\n", config.count());
 
-            deps.iter().for_each(|dep| {
-                match is_installed(&dep.name) {
-                    Ok(true) => println!("{} is installed", &dep.name),
-                    Ok(false) => println!("{} is not installed", &dep.name),
-                    Err(err) => eprintln!("Could not check installation status of {}: {}", &dep.name, err)
-                }
-            });
+    deps.iter().for_each(|dep| {
+        match is_installed(&dep.name) {
+            Ok(true) => println!("{} is installed", &dep.name),
+            Ok(false) => println!("{} is not installed", &dep.name),
+            Err(err) => eprintln!("Could not check installation status of {}: {}", &dep.name, err)
+        }
+    });
 
-            Ok(())
-        },
-        Err(error) => return Err(DepsError::InvalidCatalog(error))
-    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -43,3 +36,25 @@ impl std::fmt::Display for DepsError {
         }
     }
 }
+
+impl From<toml::de::Error> for DepsError {
+    fn from(error: toml::de::Error) -> Self {
+        DepsError::TomlParse(error)
+    }
+}
+
+impl From<CatalogError> for DepsError {
+    fn from(error: CatalogError) -> Self {
+        DepsError::InvalidCatalog(error)
+    }
+}
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+
+//     #[test]
+//     fn invalid_toml_to_toml_parse_error() {
+//         let invalid = "dependencies = []";
+//     }
+// }

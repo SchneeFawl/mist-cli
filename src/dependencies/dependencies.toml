@@ -17,3 +17,9 @@ source = "aur"
 name = "quickshell-git"
 description = "Flexible toolkit for making desktop shells with QtQuick"
 source = "aur"
+
+# DEBUG: test for empty dep name
+# [[dependencies]]
+# name = ""
+# description = ""
+# source = "aur"
