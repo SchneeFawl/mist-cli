@@ -49,12 +49,73 @@ impl From<CatalogError> for DepsError {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-//     #[test]
-//     fn invalid_toml_to_toml_parse_error() {
-//         let invalid = "dependencies = []";
-//     }
-// }
+    #[test]
+    fn invalid_toml_to_toml_parse_error() {
+        let invalid_toml = r#"
+            [[dependencies]
+            name = "some_package"
+            description = "Some package"
+            source = "aur"
+        "#;
+
+        let parsed_result: Result<DependencyConfig, _> = toml::from_str(invalid_toml);
+        assert!(parsed_result.is_err(), "Expected TOML parsing to fail");
+
+        let deps_error: DepsError = parsed_result.unwrap_err().into();
+
+        match &deps_error {
+            DepsError::TomlParse(err) => {
+                let displayed = deps_error.to_string();
+
+                assert!(
+                    displayed.contains("Failed to parse dependencies.toml:"),
+                    "Missing expected pattern in '{displayed}'"
+                );
+                assert!(
+                    displayed.contains(&err.to_string())
+                );
+            },
+            _ => panic!("Expected DepsError::TomlParse variant but got: {:?}", &deps_error)
+        }
+    }
+
+    #[test]
+    fn empty_dep_name_to_invalid_catalog_error() {
+        let invalid_dep_toml = r#"
+            [[dependencies]]
+            name = ""
+            description = "No name package"
+            source = "pacman"
+        "#;
+
+        let config: DependencyConfig = toml::from_str(invalid_dep_toml)
+            .expect("TOML parse should succeed");
+
+        let validate = config.validate();
+        assert!(validate.is_err(), "Expected validate() to fail");
+
+        let deps_error: DepsError = validate.unwrap_err().into();
+
+        match &deps_error {
+            DepsError::InvalidCatalog(CatalogError::InvalidDepName) => {
+                let displayed = deps_error.to_string();
+
+                assert!(
+                    displayed.contains("Dependency catalog validation failed:"),
+                    "Missing expected pattern in {displayed}"
+                );
+                assert!(
+                    displayed.contains("Invalid dependency name"),
+                    "Missing CatalogError display pattern in {displayed}"
+                );
+            },
+            _ => panic!(
+                "Expected DepsError::InvalidCatalog(CatalogError::InvalidDepName) but got {:?}", &deps_error
+            )
+        }
+    }
+}
