@@ -9,17 +9,28 @@ description = "Fast, feature-rich, GPU based terminal"
 source = "pacman"
 
 [[dependencies]]
-name = "ttf-roboto"
-description = "The Roboto font family"
-source = "aur"
+name = "zsh"
+description = "A very advanced and programmable command interpreter (shell) for UNIX"
+source = "pacman"
+
+[[dependencies]]
+name = "playerctl"
+description = "mpris media player controller and lib"
+source = "pacman"
+
+[[dependencies]]
+name = "networkmanager"
+description = "Network connection manager and user applications"
+source = "pacman"
+
+# --- #
 
 [[dependencies]]
 name = "quickshell-git"
 description = "Flexible toolkit for making desktop shells with QtQuick"
 source = "aur"
 
-# DEBUG: test for empty dep name
-# [[dependencies]]
-# name = ""
-# description = ""
-# source = "aur"
+[[dependencies]]
+name = "bibata-cursor-theme-bin"
+description = "Material based cursor theme"
+source = "aur"
