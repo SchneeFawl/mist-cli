@@ -10,15 +10,23 @@ pub fn deps_handler() -> Result<(), DepsError> {
     println!("{}", validate);
     println!("Number of dependencies: {}\n", config.count());
 
-    deps.iter().for_each(|dep| {
+    let mut invalid_packages: Vec<(String, std::io::Error)> = Vec::new();
+
+    for dep in deps {
         match is_installed(&dep.name) {
             Ok(true) => println!("{} is installed", &dep.name),
             Ok(false) => println!("{} is not installed", &dep.name),
-            Err(err) => eprintln!("Could not check installation status of {}: {}", &dep.name, err)
+            Err(e) => {
+                invalid_packages.push((dep.name.clone(), e));
+            }
         }
-    });
+    };
 
-    Ok(())
+    if !invalid_packages.is_empty() {
+        return Err(DepsError::InvalidPackages(invalid_packages));
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
