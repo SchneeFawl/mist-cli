@@ -4,15 +4,6 @@ use std::collections::HashSet;
 
 use crate::dependencies::installer::InstalledPackagesError::{Io, UnsuccessfulExit, Utf8Decode};
 
-pub fn is_installed(name: &str) -> std::io::Result<bool> {
-    let cmd = Command::new("pacman")
-        .arg("-Qq")
-        .arg(name)
-        .output()?;
-
-    Ok(cmd.status.success())
-}
-
 pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, InstalledPackagesError> {
     let text = from_utf8(bytes)?;
 
@@ -25,7 +16,7 @@ pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, Install
     Ok(packages)
 }
 
-pub fn is_installed_alt() -> Result<HashSet<String>, InstalledPackagesError> {
+pub fn is_installed() -> Result<HashSet<String>, InstalledPackagesError> {
     let output = Command::new("pacman")
         .arg("-Qq")
         .output()
@@ -48,6 +39,7 @@ pub fn process_listing(
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum InstalledPackagesError {
     Io(std::io::Error),
     UnsuccessfulExit(Option<i32>),
@@ -111,7 +103,6 @@ use super::*;
     #[test]
     fn reject_invalid_utf_8_bytes() {
         let invalid_bytes: &[u8] = &[0xFF, 167, 101, 0xFE];
-
         let invalid_packages = parse_installed_packages(invalid_bytes);
 
         assert!(
@@ -120,11 +111,28 @@ use super::*;
         );
     }
 
-    // #[test]
-    // fn unsuccessful_status() {
-    //     let output = Command::new("false").output()?;
-    //     let result = process_listing(
-    //         output.status.success(), output.status.code(), &output.stdout
-    //     );
-    // }
+    #[test]
+    fn unsuccessful_status() {
+        // if child status is unsuccessful
+        let failed_result = process_listing(false, Some(1), b"hyprland\nkitty\n");
+        assert!(
+            matches!(
+                failed_result,
+                Err(InstalledPackagesError::UnsuccessfulExit(Some(1)))
+            ),
+            "Expected UnsuccessfulExit(Some(1)), but got: {:?}", failed_result
+        );
+
+        // successful listing excludes a name out of the set
+        let set = b"hyprland\nkitty\n";
+        let success_set = process_listing(true, Some(0), set)
+            .expect("Successful status with valid UTF-8 should return a set");
+
+        assert!(success_set.contains("hyprland"));
+        assert!(success_set.contains("kitty"));
+        assert!(
+            !success_set.contains("waybar"),
+            "'waybar' should not be in the set"
+        );
+    }
 }
