@@ -1,9 +1,10 @@
 use crate::{
-    commands::deps::DepsError::{InstalledPackages, InvalidCatalog, TomlParse},
-    dependencies::{catalog::{CatalogError, DependencyConfig}, installer::{InstalledPackagesError, is_installed}}
+    commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage},
+    dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
+    installer::{InstalledPackagesError, is_installed}}
 };
 
-pub fn deps_handler() -> Result<(), DepsError> {
+pub fn deps_check() -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
     let deps = &config.dependencies;
     let validate = config.validate()?;
@@ -23,11 +24,32 @@ pub fn deps_handler() -> Result<(), DepsError> {
     Ok(())
 }
 
+pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
+    let config = DependencyConfig::load()?;
+    let _validate = config.validate()?;
+
+    for package in packages {
+        match config.find(package) {
+            Some(dep) => {
+                if dep.source == PackageSource::Aur {
+                    return Err(DepsError::AurPackage(dep.name.clone()))
+                } else {
+                    println!("Installing package {}", dep.name);
+                }
+            },
+            None => return Err(DepsError::UnknownPackage(package.to_string()))
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 pub enum DepsError {
     TomlParse(toml::de::Error),
     InvalidCatalog(CatalogError),
-    InstalledPackages(InstalledPackagesError)
+    InstalledPackages(InstalledPackagesError),
+    UnknownPackage(String),
+    AurPackage(String)
 }
 
 impl std::fmt::Display for DepsError {
@@ -35,7 +57,9 @@ impl std::fmt::Display for DepsError {
         match self {
             TomlParse(err) => writeln!(f, "Failed to parse dependencies.toml\n {}", err),
             InvalidCatalog(err) => writeln!(f, "Dependency catalog validation failed\n {err}"),
-            InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err)
+            InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
+            UnknownPackage(err) => write!(f, "Unknown package '{}'", err),
+            AurPackage(err) => write!(f, "Found AUR package: {}. AUR package installation isn't supported yet", err)
         }
     }
 }

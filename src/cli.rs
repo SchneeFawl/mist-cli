@@ -23,7 +23,7 @@ pub enum Commands {
     /// Dependency commands
     Deps {
         #[command(subcommand)]
-        command: DepsCommands
+        command: DepsCommands,
     },
 
     // Interactively uninstall mist-shell component(s)
@@ -35,5 +35,9 @@ pub enum Commands {
 
 #[derive(Subcommand, Debug)]
 pub enum DepsCommands {
-    Check
+    Check,
+    Install {
+        #[arg(required = true)]
+        packages: Vec<String>
+    }
 }
