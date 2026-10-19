@@ -8,10 +8,10 @@ pub fn run(command: crate::cli::Commands) -> Result<(), DepsError> {
         Install { source: _ } => {
             println!("'install' command is not implemented");
         }
-        Deps { command: _ } => {
-            deps_handler()?;
+        Deps { command: subcmd } => match subcmd {
+            DepsCommands::Check => deps_check()?,
+            DepsCommands::Install{ packages } => deps_install(&packages)?
         }
     }
-
     Ok(())
 }

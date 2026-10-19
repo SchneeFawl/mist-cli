@@ -16,9 +16,9 @@ pub fn deps_check() -> Result<(), DepsError> {
 
     for dep in deps {
         if installed_set.contains(&dep.name) {
-            println!("{} is installed", &dep.name);
+            println!("{} is installed", dep.name);
         } else {
-            println!("{} is not installed", &dep.name);
+            println!("{} is not installed", dep.name);
         }
     };
     Ok(())
@@ -27,6 +27,11 @@ pub fn deps_check() -> Result<(), DepsError> {
 pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
     let _validate = config.validate()?;
+    deps_install_with_config(packages, &config)
+}
+
+fn deps_install_with_config(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
+    let mut valid_pkgs: Vec<String> = Vec::new();
 
     for package in packages {
         match config.find(package) {
@@ -34,11 +39,15 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
                 if dep.source == PackageSource::Aur {
                     return Err(DepsError::AurPackage(dep.name.clone()))
                 } else {
-                    println!("Installing package {}", dep.name);
+                    valid_pkgs.push(dep.name.clone());
                 }
             },
             None => return Err(DepsError::UnknownPackage(package.to_string()))
         }
+    }
+
+    for valid_pkg in valid_pkgs {
+        println!("Installing package '{}'", valid_pkg);
     }
     Ok(())
 }
@@ -58,7 +67,7 @@ impl std::fmt::Display for DepsError {
             TomlParse(err) => writeln!(f, "Failed to parse dependencies.toml\n {}", err),
             InvalidCatalog(err) => writeln!(f, "Dependency catalog validation failed\n {err}"),
             InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
-            UnknownPackage(err) => write!(f, "Unknown package '{}'", err),
+            UnknownPackage(err) => write!(f, "Found unknown package '{}'", err),
             AurPackage(err) => write!(f, "Found AUR package: {}. AUR package installation isn't supported yet", err)
         }
     }
@@ -84,6 +93,7 @@ impl From<InstalledPackagesError> for DepsError {
 
 #[cfg(test)]
 mod test {
+use std::{io::ErrorKind::Other, path::MAIN_SEPARATOR_STR};
 
 use super::*;
 
@@ -151,5 +161,36 @@ use super::*;
                 "Expected DepsError::InvalidCatalog(CatalogError::InvalidDepName) but got {:?}", &deps_error
             )
         }
+    }
+
+    #[test]
+    fn valid_pacman_package() {
+        let toml_string = r#"
+            [[dependencies]]
+            name = "hyprland"
+            description = "Wayland compositor"
+            source = "pacman"
+
+            [[dependencies]]
+            name = "quickshell-git"
+            description = ""
+            source = "aur"
+        "#;
+
+        let config: DependencyConfig = toml::from_str(toml_string)
+            .expect("TOML parse should succeed");
+
+        let pacman_pkg: &[String] = &["hyprland".to_string()];
+        let aur_pkg: &[String] = &["quickshell-git".to_string()];
+        let unknown_pkg: &[String] = &["something".to_string()];
+
+        let pacman_result = deps_install_with_config(pacman_pkg, &config);
+        assert!(!pacman_result.is_err(), "Expected pacman package to install");
+
+        let unknown_err = deps_install_with_config(unknown_pkg, &config);
+        assert!(matches!(unknown_err, Err(DepsError::UnknownPackage(_))));
+
+        let aur_err = deps_install_with_config(aur_pkg, &config);
+        assert!(matches!(aur_err, Err(DepsError::AurPackage(_))));
     }
 }

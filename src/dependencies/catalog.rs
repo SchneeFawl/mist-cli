@@ -67,7 +67,7 @@ impl DependencyConfig {
     }
 
     pub fn count(&self) -> usize {
-        self.dependencies.iter().count()
+        self.dependencies.iter().len()
     }
 }
 
