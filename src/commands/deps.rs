@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage},
     dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
@@ -26,8 +28,44 @@ pub fn deps_check() -> Result<(), DepsError> {
 
 pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
-    let _validate = config.validate()?;
+    config.validate()?;
+
+    let installed_set = is_installed()?;
+    let plan = plan_pacman_install(packages, &config, &installed_set)?;
+    if plan.is_empty() {
+        println!("All requested packages are already installed");
+        return Ok(())
+    }
+
     deps_install_with_config(packages, &config)
+}
+
+pub fn plan_pacman_install(
+    packages: &[String],
+    config: &DependencyConfig,
+    installed: &HashSet<String>
+) -> Result<Vec<String>, DepsError> {
+    for package in packages {
+        match config.find(package) {
+            Some(dep) => {
+                if dep.source == PackageSource::Aur {
+                    return Err(DepsError::AurPackage(dep.name.clone()));
+                }
+            },
+            None => return Err(DepsError::UnknownPackage(package.to_string()))
+        }
+    }
+
+    let mut plan: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    for package in packages {
+        if !installed.contains(package) && seen.insert(package.clone()) {
+            plan.push(package.clone());
+        }
+    }
+
+    Ok(plan)
 }
 
 fn deps_install_with_config(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
@@ -47,7 +85,7 @@ fn deps_install_with_config(packages: &[String], config: &DependencyConfig) -> R
     }
 
     for valid_pkg in valid_pkgs {
-        println!("Installing package '{}'", valid_pkg);
+        println!("Validated package '{}'", valid_pkg);
     }
     Ok(())
 }
@@ -93,8 +131,6 @@ impl From<InstalledPackagesError> for DepsError {
 
 #[cfg(test)]
 mod test {
-use std::{io::ErrorKind::Other, path::MAIN_SEPARATOR_STR};
-
 use super::*;
 
     #[test]
@@ -164,7 +200,7 @@ use super::*;
     }
 
     #[test]
-    fn valid_pacman_package() {
+    fn validate_pacman_packages() {
         let toml_string = r#"
             [[dependencies]]
             name = "hyprland"

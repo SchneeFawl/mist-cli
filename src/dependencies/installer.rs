@@ -4,18 +4,6 @@ use std::collections::HashSet;
 
 use crate::dependencies::installer::InstalledPackagesError::{Io, UnsuccessfulExit, Utf8Decode};
 
-pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, InstalledPackagesError> {
-    let text = from_utf8(bytes)?;
-
-    let packages = text
-        .lines()
-        .filter_map(|line| line.split_whitespace().next())
-        .map(String::from)
-        .collect();
-
-    Ok(packages)
-}
-
 pub fn is_installed() -> Result<HashSet<String>, InstalledPackagesError> {
     let output = Command::new("pacman")
         .arg("-Qq")
@@ -30,12 +18,26 @@ pub fn is_installed() -> Result<HashSet<String>, InstalledPackagesError> {
 }
 
 pub fn process_listing(
-    success: bool, exit_code: Option<i32>, stdout: &[u8]
+    success: bool,
+    exit_code: Option<i32>,
+    stdout: &[u8]
 ) -> Result<HashSet<String>, InstalledPackagesError> {
     if !success {
         return Err(InstalledPackagesError::UnsuccessfulExit(exit_code))
     }
     parse_installed_packages(stdout)
+}
+
+pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, InstalledPackagesError> {
+    let text = from_utf8(bytes)?;
+
+    let packages = text
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .map(String::from)
+        .collect();
+
+    Ok(packages)
 }
 
 #[derive(Debug)]
