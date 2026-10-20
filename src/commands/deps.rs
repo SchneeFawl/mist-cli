@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage},
+    commands::deps::{DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage}},
     dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
     installer::{InstalledPackagesError, is_installed}}
 };
@@ -29,15 +29,19 @@ pub fn deps_check() -> Result<(), DepsError> {
 pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
     config.validate()?;
+    deps_install_with_config(packages, &config)?;
 
     let installed_set = is_installed()?;
     let plan = plan_pacman_install(packages, &config, &installed_set)?;
     if plan.is_empty() {
         println!("All requested packages are already installed");
-        return Ok(())
+        Ok(())
+    } else {
+        for package in plan {
+            println!("'{}' is not installed", package)
+        }
+        Ok(())
     }
-
-    deps_install_with_config(packages, &config)
 }
 
 pub fn plan_pacman_install(
