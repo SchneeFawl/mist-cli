@@ -233,4 +233,43 @@ use super::*;
         let aur_err = deps_install_with_config(aur_pkg, &config);
         assert!(matches!(aur_err, Err(DepsError::AurPackage(_))));
     }
+
+    #[test]
+    fn plan_pacman_install_deduplication_and_missing() {
+        let toml_string = r#"
+            [[dependencies]]
+            name = "hyprland"
+            description = "Wayland compositor"
+            source = "pacman"
+
+            [[dependencies]]
+            name = "kitty"
+            description = "Fast, feature-rich, GPU based terminal"
+            source = "pacman"
+        "#;
+
+        let config: DependencyConfig = toml::from_str(toml_string)
+            .expect("Expected TOML parse to succeed");
+
+        let mut installed: HashSet<String> = HashSet::new();
+        installed.insert("hyprland".to_string());
+
+        let requested = vec![
+            "hyprland".to_string(),
+            "kitty".to_string(),
+            "kitty".to_string()
+        ];
+
+        let plan = plan_pacman_install(&requested, &config, &installed)
+            .expect("Expected planning to succeed");
+
+        // deduplicates "kitty", "hyprland" is filtered
+        assert_eq!(plan, vec!["kitty".to_string()]);
+
+        // if all packages are installed
+        installed.insert("kitty".to_string());
+        let all_installed_plan = plan_pacman_install(&requested, &config, &installed)
+            .expect("Expected planning to succeed");
+        assert!(all_installed_plan.is_empty())
+    }
 }
