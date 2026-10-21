@@ -276,4 +276,19 @@ use super::*;
             .expect("Expected planning to succeed");
         assert!(all_installed_plan.is_empty())
     }
+
+    #[test]
+    fn confirm_install_acceptance() {
+        let input_yes: &str = "yes";
+        let input_y: &str = "y";
+        let input_n: &str = "n";
+        let input_no: &str = "no";
+        let input_empty: &str = "";
+
+        assert!(confirm_install_decision(input_yes), "Expected 'yes' to be accepted");
+        assert!(confirm_install_decision(input_y), "Expected 'y' to be accepted");
+        assert!(!confirm_install_decision(input_n), "Expected 'n' to be rejected");
+        assert!(!confirm_install_decision(input_no), "Expected 'no' to be rejected");
+        assert!(!confirm_install_decision(input_empty), "Expected empty input to be rejected");
+    }
 }
