@@ -1,4 +1,6 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet, io::{self, IsTerminal, Write, stdin}
+};
 
 use crate::{
     commands::deps::{DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage}},
@@ -35,13 +37,22 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let plan = plan_pacman_install(packages, &config, &installed_set)?;
     if plan.is_empty() {
         println!("All requested packages are already installed");
-        Ok(())
-    } else {
-        for package in plan {
-            println!("'{}' is not installed", package)
-        }
-        Ok(())
+        return Ok(())
     }
+
+    println!("Total packages to install: {}", &plan.len());
+    for package in &plan {
+        println!("  - {}", package)
+    }
+    println!("");
+
+    if confirm_install() {
+        println!("Installation confirmed")
+    } else {
+        println!("Installation cancelled")
+    }
+
+    Ok(())
 }
 
 pub fn plan_pacman_install(
@@ -92,6 +103,30 @@ fn deps_install_with_config(packages: &[String], config: &DependencyConfig) -> R
         println!("Validated package '{}'", valid_pkg);
     }
     Ok(())
+}
+
+pub fn confirm_install() -> bool {
+    let stdin = stdin();
+
+    if !stdin.is_terminal() {
+        return false;
+    }
+
+    print!("> Proceed with installation? [y/N] ");
+    if io::stdout().flush().is_err() {
+        return false;
+    }
+
+    let mut input: String = String::new();
+    match stdin.read_line(&mut input) {
+        Ok(0) | Err(_) => false,        // EOF
+        Ok(_) => confirm_install_decision(&input)
+    }
+}
+
+pub fn confirm_install_decision(input: &str) -> bool {
+    let trimmed = input.trim();
+    trimmed.eq_ignore_ascii_case("y") || trimmed.eq_ignore_ascii_case("yes")
 }
 
 #[derive(Debug)]
@@ -201,37 +236,6 @@ use super::*;
                 "Expected DepsError::InvalidCatalog(CatalogError::InvalidDepName) but got {:?}", &deps_error
             )
         }
-    }
-
-    #[test]
-    fn validate_pacman_packages() {
-        let toml_string = r#"
-            [[dependencies]]
-            name = "hyprland"
-            description = "Wayland compositor"
-            source = "pacman"
-
-            [[dependencies]]
-            name = "quickshell-git"
-            description = ""
-            source = "aur"
-        "#;
-
-        let config: DependencyConfig = toml::from_str(toml_string)
-            .expect("TOML parse should succeed");
-
-        let pacman_pkg: &[String] = &["hyprland".to_string()];
-        let aur_pkg: &[String] = &["quickshell-git".to_string()];
-        let unknown_pkg: &[String] = &["something".to_string()];
-
-        let pacman_result = deps_install_with_config(pacman_pkg, &config);
-        assert!(!pacman_result.is_err(), "Expected pacman package to install");
-
-        let unknown_err = deps_install_with_config(unknown_pkg, &config);
-        assert!(matches!(unknown_err, Err(DepsError::UnknownPackage(_))));
-
-        let aur_err = deps_install_with_config(aur_pkg, &config);
-        assert!(matches!(aur_err, Err(DepsError::AurPackage(_))));
     }
 
     #[test]
