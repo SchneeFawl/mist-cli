@@ -40,6 +40,19 @@ pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, Install
     Ok(packages)
 }
 
+pub fn install_planned_packages(packages: &[String]) -> Result<(), InstallerError> {
+    let cmd = Command::new("sudo")
+        .args(["pacman", "-S", "--needed"])
+        .args(packages)
+        .status()?;
+
+    if !cmd.success() {
+        return Err(InstallerError::UnsuccessfulExit(cmd.code()))
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum InstalledPackagesError {
@@ -61,6 +74,35 @@ impl std::fmt::Display for InstalledPackagesError {
 impl From<Utf8Error> for InstalledPackagesError {
     fn from(error: Utf8Error) -> Self {
         InstalledPackagesError::Utf8Decode(error)
+    }
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum InstallerError {
+    StartingProcess(std::io::Error),
+    UnsuccessfulExit(Option<i32>)
+}
+
+impl std::fmt::Display for InstallerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InstallerError::StartingProcess(e) => {
+                write!(f, "pacman process failed to start:\n {}", e)
+            },
+            InstallerError::UnsuccessfulExit(Some(code)) => {
+                write!(f, "pacman process exited with exit code {}", code)
+            },
+            InstallerError::UnsuccessfulExit(None) => {
+                write!(f, "pacman process terminated by a signal (no exit code)")
+            }
+        }
+    }
+}
+
+impl From<std::io::Error> for InstallerError {
+    fn from(error: std::io::Error) -> Self {
+        InstallerError::StartingProcess(error)
     }
 }
 

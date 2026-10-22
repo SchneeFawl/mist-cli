@@ -3,9 +3,9 @@ use std::{
 };
 
 use crate::{
-    commands::deps::{DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage}},
+    commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
     dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
-    installer::{InstalledPackagesError, is_installed}}
+    installer::{InstalledPackagesError, InstallerError, install_planned_packages, is_installed}}
 };
 
 pub fn deps_check() -> Result<(), DepsError> {
@@ -31,7 +31,6 @@ pub fn deps_check() -> Result<(), DepsError> {
 pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
     config.validate()?;
-    deps_install_with_config(packages, &config)?;
 
     let installed_set = is_installed()?;
     let plan = plan_pacman_install(packages, &config, &installed_set)?;
@@ -47,7 +46,8 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     println!("");
 
     if confirm_install() {
-        println!("Installation confirmed")
+        println!("Installation confirmed");
+        install_planned_packages(&plan)?
     } else {
         println!("Installation cancelled")
     }
@@ -83,28 +83,6 @@ pub fn plan_pacman_install(
     Ok(plan)
 }
 
-fn deps_install_with_config(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
-    let mut valid_pkgs: Vec<String> = Vec::new();
-
-    for package in packages {
-        match config.find(package) {
-            Some(dep) => {
-                if dep.source == PackageSource::Aur {
-                    return Err(DepsError::AurPackage(dep.name.clone()))
-                } else {
-                    valid_pkgs.push(dep.name.clone());
-                }
-            },
-            None => return Err(DepsError::UnknownPackage(package.to_string()))
-        }
-    }
-
-    for valid_pkg in valid_pkgs {
-        println!("Validated package '{}'", valid_pkg);
-    }
-    Ok(())
-}
-
 pub fn confirm_install() -> bool {
     let stdin = stdin();
 
@@ -133,9 +111,10 @@ pub fn confirm_install_decision(input: &str) -> bool {
 pub enum DepsError {
     TomlParse(toml::de::Error),
     InvalidCatalog(CatalogError),
-    InstalledPackages(InstalledPackagesError),
     UnknownPackage(String),
-    AurPackage(String)
+    AurPackage(String),
+    InstalledPackages(InstalledPackagesError),
+    Installer(InstallerError)
 }
 
 impl std::fmt::Display for DepsError {
@@ -143,9 +122,10 @@ impl std::fmt::Display for DepsError {
         match self {
             TomlParse(err) => writeln!(f, "Failed to parse dependencies.toml\n {}", err),
             InvalidCatalog(err) => writeln!(f, "Dependency catalog validation failed\n {err}"),
-            InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
             UnknownPackage(err) => write!(f, "Found unknown package '{}'", err),
-            AurPackage(err) => write!(f, "Found AUR package: {}. AUR package installation isn't supported yet", err)
+            AurPackage(err) => write!(f, "Found AUR package: {}. AUR package installation isn't supported yet", err),
+            InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
+            Installer(err) => write!(f, "Failed to install planned packages\n {}", err)
         }
     }
 }
@@ -165,6 +145,12 @@ impl From<CatalogError> for DepsError {
 impl From<InstalledPackagesError> for DepsError {
     fn from(error: InstalledPackagesError) -> Self {
         DepsError::InstalledPackages(error)
+    }
+}
+
+impl From<InstallerError> for DepsError {
+    fn from(error: InstallerError) -> Self {
+        DepsError::Installer(error)
     }
 }
 
