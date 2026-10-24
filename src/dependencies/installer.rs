@@ -41,15 +41,19 @@ pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, Install
 }
 
 pub fn install_planned_packages(packages: &[String]) -> Result<(), InstallerError> {
-    let cmd = Command::new("sudo")
-        .args(["pacman", "-S", "--needed"])
-        .args(packages)
-        .status()?;
+    let mut cmd: Command = Command::new("sudo");
+    cmd.args(["pacman", "-S", "--needed"]);
+    cmd.args(packages);
 
-    if !cmd.success() {
-        return Err(InstallerError::UnsuccessfulExit(cmd.code()))
+    execute_install_command(cmd)
+}
+
+pub fn execute_install_command(mut cmd: Command) -> Result<(), InstallerError> {
+    let status = cmd.status()?;
+
+    if !status.success() {
+        return Err(InstallerError::UnsuccessfulExit(status.code()))
     }
-
     Ok(())
 }
 
@@ -78,7 +82,6 @@ impl From<Utf8Error> for InstalledPackagesError {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum InstallerError {
     StartingProcess(std::io::Error),
     UnsuccessfulExit(Option<i32>)
@@ -108,6 +111,7 @@ impl From<std::io::Error> for InstallerError {
 
 #[cfg(test)]
 mod test {
+
 use super::*;
 
     #[test]
@@ -177,6 +181,33 @@ use super::*;
         assert!(
             !success_set.contains("waybar"),
             "'waybar' should not be in the set"
+        );
+    }
+
+    #[test]
+    fn install_planned_packages_command() {
+        let cmd_success = Command::new("true");
+        assert!(
+            !execute_install_command(cmd_success).is_err(),
+            "Expected commmand to run successfully"
+        );
+
+        let cmd_fail = Command::new("false");
+        assert!(
+            matches!(
+                execute_install_command(cmd_fail),
+                Err(InstallerError::UnsuccessfulExit(Some(1)))
+            ),
+            "Expected command to fail"
+        );
+
+        let cmd_nonexistent = Command::new("nonexistent-command");
+        assert!(
+            matches!(
+                execute_install_command(cmd_nonexistent),
+                Err(InstallerError::StartingProcess(_))
+            ),
+            "Expected command to fail"
         );
     }
 }
