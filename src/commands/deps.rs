@@ -32,18 +32,19 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     let config = DependencyConfig::load()?;
     config.validate()?;
 
+    check_packages(packages, &config)?;
     let installed_set = is_installed()?;
-    let plan = plan_pacman_install(packages, &config, &installed_set)?;
+    let plan = plan_pacman_install(packages, &installed_set)?;
     if plan.is_empty() {
         println!("All requested packages are already installed");
         return Ok(())
     }
 
-    println!("Total packages to install: {}", &plan.len());
+    println!("Total packages to install: {}", plan.len());
     for package in &plan {
         println!("  - {}", package)
     }
-    println!("");
+    println!();
 
     if confirm_install() {
         println!("Installation confirmed");
@@ -57,9 +58,21 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
 
 pub fn plan_pacman_install(
     packages: &[String],
-    config: &DependencyConfig,
     installed: &HashSet<String>
 ) -> Result<Vec<String>, DepsError> {
+    let mut plan: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    for package in packages {
+        if !installed.contains(package) && seen.insert(package.clone()) {
+            plan.push(package.clone());
+        }
+    }
+
+    Ok(plan)
+}
+
+pub fn check_packages(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
     for package in packages {
         match config.find(package) {
             Some(dep) => {
@@ -71,16 +84,7 @@ pub fn plan_pacman_install(
         }
     }
 
-    let mut plan: Vec<String> = Vec::new();
-    let mut seen: HashSet<String> = HashSet::new();
-
-    for package in packages {
-        if !installed.contains(package) && seen.insert(package.clone()) {
-            plan.push(package.clone());
-        }
-    }
-
-    Ok(plan)
+    Ok(())
 }
 
 pub fn confirm_install() -> bool {
@@ -226,21 +230,6 @@ use super::*;
 
     #[test]
     fn plan_pacman_install_deduplication_and_missing() {
-        let toml_string = r#"
-            [[dependencies]]
-            name = "hyprland"
-            description = "Wayland compositor"
-            source = "pacman"
-
-            [[dependencies]]
-            name = "kitty"
-            description = "Fast, feature-rich, GPU based terminal"
-            source = "pacman"
-        "#;
-
-        let config: DependencyConfig = toml::from_str(toml_string)
-            .expect("Expected TOML parse to succeed");
-
         let mut installed: HashSet<String> = HashSet::new();
         installed.insert("hyprland".to_string());
 
@@ -250,7 +239,7 @@ use super::*;
             "kitty".to_string()
         ];
 
-        let plan = plan_pacman_install(&requested, &config, &installed)
+        let plan = plan_pacman_install(&requested, &installed)
             .expect("Expected planning to succeed");
 
         // deduplicates "kitty", "hyprland" is filtered
@@ -258,7 +247,7 @@ use super::*;
 
         // if all packages are installed
         installed.insert("kitty".to_string());
-        let all_installed_plan = plan_pacman_install(&requested, &config, &installed)
+        let all_installed_plan = plan_pacman_install(&requested, &installed)
             .expect("Expected planning to succeed");
         assert!(all_installed_plan.is_empty())
     }
