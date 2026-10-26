@@ -301,4 +301,74 @@ use super::*;
         assert!(!confirm_install_decision(input_no), "Expected 'no' to be rejected");
         assert!(!confirm_install_decision(input_empty), "Expected empty input to be rejected");
     }
+
+    #[test]
+    fn plan_install_deduplication_and_missing() {
+        let toml_string = r#"
+            [[dependencies]]
+            name = "pacman-1"
+            description = "missing pacman pkg 1"
+            source = "pacman"
+
+            [[dependencies]]
+            name = "pacman-2"
+            description = "missing pacman pkg 2"
+            source = "pacman"
+
+            [[dependencies]]
+            name = "pacman-3"
+            description = "already installed pacman pkg"
+            source = "aur"
+
+            [[dependencies]]
+            name = "aur-1"
+            description = "missing aur pkg 1"
+            source = "aur"
+
+            [[dependencies]]
+            name = "aur-2"
+            description = "missing aur pkg 2"
+            source = "aur"
+        "#;
+        let config: DependencyConfig = toml::from_str(toml_string)
+            .expect("Expected TOML parsing to succeed");
+
+        let mut installed: HashSet<String> = HashSet::new();
+        installed.insert("pacman-3".to_string());       // pkg to be skipped
+
+        let requested = vec![
+            "aur-1".to_string(),
+            "pacman-1".to_string(),
+            "pacman-3".to_string(),
+            "aur-2".to_string(),
+            "aur-1".to_string(),        // duplicate
+            "pacman-2".to_string(),
+        ];
+        let plan = plan_install(&requested, &config, &installed)
+            .expect("Expected planning to succeed");
+
+        assert_eq!(
+            plan.pacman,
+            vec!["pacman-1".to_string(), "pacman-2".to_string()],
+            "Pacman packages should preserve order and remove installed ones"
+        );
+        assert_eq!(
+            plan.aur,
+            vec!["aur-1".to_string(), "aur-2".to_string()],
+            "AUR packages should preserve order and deduplicate the repeats"
+        );
+
+        let request_with_unknown = vec![
+            "pacman-1".to_string(),
+            "unknown-pkg".to_string()
+        ];
+        let result = plan_install(&request_with_unknown, &config, &installed);
+        assert!(
+            matches!(
+                result,
+                Err(DepsError::UnknownPackage(pkg)) if pkg == "unknown-pkg"
+            ),
+            "Expected Err(DepsError::UnknownPackage())"
+        );
+    }
 }
