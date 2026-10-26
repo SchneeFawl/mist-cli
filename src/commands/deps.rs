@@ -56,6 +56,35 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
     Ok(())
 }
 
+pub fn plan_install(
+    packages: &[String],
+    config: &DependencyConfig,
+    installed: &HashSet<String>
+) -> Result<InstallPlan, DepsError> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut install_plan: InstallPlan = InstallPlan {
+        pacman: Vec::new(),
+        aur: Vec::new()
+    };
+
+    for package in packages {
+        match config.find(package) {
+            Some(dep) => {
+                if !installed.contains(&dep.name) && seen.insert(dep.name.clone()) {
+                    if dep.source == PackageSource::Pacman {
+                        install_plan.pacman.push(dep.name.clone());
+                    } else if dep.source == PackageSource::Aur {
+                        install_plan.aur.push(dep.name.clone());
+                    }
+                }
+            },
+            None => return Err(DepsError::UnknownPackage(package.clone()))
+        };
+    };
+
+    Ok(install_plan)
+}
+
 pub fn plan_pacman_install(
     packages: &[String],
     installed: &HashSet<String>
@@ -109,6 +138,12 @@ pub fn confirm_install() -> bool {
 pub fn confirm_install_decision(input: &str) -> bool {
     let trimmed = input.trim();
     trimmed.eq_ignore_ascii_case("y") || trimmed.eq_ignore_ascii_case("yes")
+}
+
+#[derive(Debug)]
+pub struct InstallPlan {
+    pub pacman: Vec<String>,
+    pub aur: Vec<String>
 }
 
 #[derive(Debug)]
