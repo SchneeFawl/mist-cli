@@ -5,7 +5,7 @@ use std::{
 use crate::{
     commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
     dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
-    installer::{InstalledPackagesError, InstallerError, install_planned_packages, is_installed}}
+    installer::{InstalledPackagesError, InstallerError, install_planned_pacman_packages, is_installed}}
 };
 
 pub fn deps_check() -> Result<(), DepsError> {
@@ -48,7 +48,7 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
 
     if confirm_install() {
         println!("Installation confirmed");
-        install_planned_packages(&plan)?
+        install_planned_pacman_packages(&plan)?
     } else {
         println!("Installation cancelled")
     }
@@ -318,7 +318,7 @@ use super::*;
             [[dependencies]]
             name = "pacman-3"
             description = "already installed pacman pkg"
-            source = "aur"
+            source = "pacman"
 
             [[dependencies]]
             name = "aur-1"
