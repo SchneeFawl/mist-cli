@@ -57,10 +57,18 @@ pub fn install_planned_aur_packages(packages: &[String]) -> Result<(), Installer
 }
 
 pub fn execute_install_command(mut cmd: Command) -> Result<(), InstallerError> {
-    let status = cmd.status()?;
+    let status = cmd
+        .status()
+        .map_err(|err| InstallerError::StartingProcess(
+            cmd.get_program().to_string_lossy().into_owned(),
+            err
+        ))?;
 
     if !status.success() {
-        return Err(InstallerError::UnsuccessfulExit(status.code()))
+        return Err(InstallerError::UnsuccessfulExit(
+            cmd.get_program().to_string_lossy().into_owned(),
+            status.code()
+        ))
     }
     Ok(())
 }
@@ -91,29 +99,23 @@ impl From<Utf8Error> for InstalledPackagesError {
 
 #[derive(Debug)]
 pub enum InstallerError {
-    StartingProcess(std::io::Error),
-    UnsuccessfulExit(Option<i32>)
+    StartingProcess(String, std::io::Error),
+    UnsuccessfulExit(String, Option<i32>)
 }
 
 impl std::fmt::Display for InstallerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstallerError::StartingProcess(e) => {
-                write!(f, "pacman process failed to start:\n {}", e)
+            InstallerError::StartingProcess(program, e) => {
+                write!(f, "{} process failed to start:\n {}", program, e)
             },
-            InstallerError::UnsuccessfulExit(Some(code)) => {
-                write!(f, "pacman process exited with exit code {}", code)
+            InstallerError::UnsuccessfulExit(program, Some(code)) => {
+                write!(f, "{} process exited with exit code {}", program, code)
             },
-            InstallerError::UnsuccessfulExit(None) => {
-                write!(f, "pacman process terminated by a signal (no exit code)")
+            InstallerError::UnsuccessfulExit(program, None) => {
+                write!(f, "{} process terminated by a signal (no exit code)", program)
             }
         }
-    }
-}
-
-impl From<std::io::Error> for InstallerError {
-    fn from(error: std::io::Error) -> Self {
-        InstallerError::StartingProcess(error)
     }
 }
 
@@ -204,7 +206,10 @@ use super::*;
         assert!(
             matches!(
                 execute_install_command(cmd_fail),
-                Err(InstallerError::UnsuccessfulExit(Some(1)))
+                Err(InstallerError::UnsuccessfulExit(program, code)) if {
+                    program == "false" &&
+                    code == Some(1)
+                }
             ),
             "Expected command to fail"
         );
@@ -213,7 +218,9 @@ use super::*;
         assert!(
             matches!(
                 execute_install_command(cmd_nonexistent),
-                Err(InstallerError::StartingProcess(_))
+                Err(InstallerError::StartingProcess(program, _)) if {
+                    program == "nonexistent-command"
+                }
             ),
             "Expected command to fail"
         );
