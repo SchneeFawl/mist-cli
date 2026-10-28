@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
+    commands::deps::DepsError::{InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
     dependencies::{
         catalog::{CatalogError, DependencyConfig, PackageSource},
     installer::{
@@ -47,6 +47,7 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
 
     let total_packages: usize = plan.pacman.len() + plan.aur.len();
     println!("Total packages to install: {}", total_packages);
+    println!();
 
     if !plan.pacman.is_empty() {
         println!("Pacman packages to install:");
@@ -65,8 +66,12 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
 
     if confirm_install() {
         println!("Installation confirmed");
-        install_planned_pacman_packages(&plan.pacman)?;
-        install_planned_aur_packages(&plan.aur)?;
+        if !plan.pacman.is_empty() {
+            install_planned_pacman_packages(&plan.pacman)?;
+        }
+        if !plan.aur.is_empty() {
+            install_planned_aur_packages(&plan.aur)?;
+        }
     } else {
         println!("Installation cancelled")
     }
@@ -165,7 +170,6 @@ pub enum DepsError {
     TomlParse(toml::de::Error),
     InvalidCatalog(CatalogError),
     UnknownPackage(String),
-    AurPackage(String),
     InstalledPackages(InstalledPackagesError),
     Installer(InstallerError)
 }
@@ -176,7 +180,6 @@ impl std::fmt::Display for DepsError {
             TomlParse(err) => writeln!(f, "Failed to parse dependencies.toml\n {}", err),
             InvalidCatalog(err) => writeln!(f, "Dependency catalog validation failed\n {err}"),
             UnknownPackage(err) => write!(f, "Found unknown package '{}'", err),
-            AurPackage(err) => write!(f, "Found AUR package: {}. AUR package installation isn't supported yet", err),
             InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
             Installer(err) => write!(f, "Failed to install planned packages\n {}", err)
         }
