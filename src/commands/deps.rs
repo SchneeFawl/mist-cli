@@ -4,8 +4,12 @@ use std::{
 
 use crate::{
     commands::deps::DepsError::{AurPackage, InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
-    dependencies::{catalog::{CatalogError, DependencyConfig, PackageSource},
-    installer::{InstalledPackagesError, InstallerError, install_planned_pacman_packages, is_installed}}
+    dependencies::{
+        catalog::{CatalogError, DependencyConfig, PackageSource},
+    installer::{
+        InstalledPackagesError, InstallerError, install_planned_pacman_packages, install_planned_aur_packages,
+        is_installed
+    }}
 };
 
 pub fn deps_check() -> Result<(), DepsError> {
@@ -34,21 +38,35 @@ pub fn deps_install(packages: &[String]) -> Result<(), DepsError> {
 
     check_packages(packages, &config)?;
     let installed_set = is_installed()?;
-    let plan = plan_pacman_install(packages, &installed_set)?;
-    if plan.is_empty() {
+    let plan = plan_install(packages, &config, &installed_set)?;
+
+    if plan.pacman.is_empty() && plan.aur.is_empty() {
         println!("All requested packages are already installed");
         return Ok(())
     }
 
-    println!("Total packages to install: {}", plan.len());
-    for package in &plan {
-        println!("  - {}", package)
+    let total_packages: usize = plan.pacman.len() + plan.aur.len();
+    println!("Total packages to install: {}", total_packages);
+
+    if !plan.pacman.is_empty() {
+        println!("Pacman packages to install:");
+        for pkg in &plan.pacman {
+            println!("  - {}", pkg)
+        }
+    }
+
+    if !plan.aur.is_empty() {
+        println!("AUR packages to install:");
+        for pkg in &plan.aur {
+            println!("  - {}", pkg)
+        }
     }
     println!();
 
     if confirm_install() {
         println!("Installation confirmed");
-        install_planned_pacman_packages(&plan)?
+        install_planned_pacman_packages(&plan.pacman)?;
+        install_planned_aur_packages(&plan.aur)?;
     } else {
         println!("Installation cancelled")
     }
@@ -104,11 +122,7 @@ pub fn plan_pacman_install(
 pub fn check_packages(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
     for package in packages {
         match config.find(package) {
-            Some(dep) => {
-                if dep.source == PackageSource::Aur {
-                    return Err(DepsError::AurPackage(dep.name.clone()));
-                }
-            },
+            Some(_) => continue,
             None => return Err(DepsError::UnknownPackage(package.to_string()))
         }
     }
