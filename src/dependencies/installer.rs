@@ -233,4 +233,24 @@ use super::*;
             "Expected command to fail"
         );
     }
+
+    #[test]
+    fn pacman_install_command_builder() {
+        let packages: &[String] = &[
+            "hyprland".to_string(), "kitty".to_string()
+        ];
+
+        let command: Command = build_pacman_install_command(packages);
+
+        assert!(
+            command.get_program().eq("sudo"),
+            "Expected program name to be 'sudo'"
+        );
+
+        let pacman_args = ["pacman", "-S", "--needed", "hyprland", "kitty"];
+        assert!(
+            command.get_args().eq(pacman_args),
+            "Expected pacman arguments to match"
+        )
+    }
 }
