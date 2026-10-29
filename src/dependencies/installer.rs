@@ -40,19 +40,27 @@ pub fn parse_installed_packages(bytes: &[u8]) -> Result<HashSet<String>, Install
     Ok(packages)
 }
 
-pub fn install_planned_pacman_packages(packages: &[String]) -> Result<(), InstallerError> {
-    let mut cmd: Command = Command::new("sudo");
-    cmd.args(["pacman", "-S", "--needed"]);
-    cmd.args(packages);
+fn build_pacman_install_command(packages: &[String]) -> Command {
+    let mut command: Command = Command::new("sudo");
+    command.args(["pacman", "-S", "--needed"]);
+    command.args(packages);
+    command
+}
 
+pub fn install_planned_pacman_packages(packages: &[String]) -> Result<(), InstallerError> {
+    let cmd: Command = build_pacman_install_command(packages);
     execute_install_command(cmd)
 }
 
-pub fn install_planned_aur_packages(packages: &[String]) -> Result<(), InstallerError> {
-    let mut cmd: Command = Command::new("yay");
-    cmd.args(["-S", "--needed"]);
-    cmd.args(packages);
+fn build_aur_install_command(packages: &[String]) -> Command {
+    let mut command: Command = Command::new("yay");
+    command.args(["-S", "--needed"]);
+    command.args(packages);
+    command
+}
 
+pub fn install_planned_aur_packages(packages: &[String]) -> Result<(), InstallerError> {
+    let cmd: Command = build_aur_install_command(packages);
     execute_install_command(cmd)
 }
 
