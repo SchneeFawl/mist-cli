@@ -247,10 +247,33 @@ use super::*;
             "Expected program name to be 'sudo'"
         );
 
-        let pacman_args = ["pacman", "-S", "--needed", "hyprland", "kitty"];
+        let pacman_args: [&str; 5] = ["pacman", "-S", "--needed", "hyprland", "kitty"];
         assert!(
             command.get_args().eq(pacman_args),
             "Expected pacman arguments to match"
+        )
+    }
+
+    #[test]
+    fn aur_install_command_builder() {
+        let packages: &[String] = &[
+            "quickshell-git".to_string(),
+            "bibata-cursor-theme-bin".to_string()
+        ];
+
+        let command: Command = build_aur_install_command(packages);
+
+        assert!(
+            command.get_program().eq("yay"),
+            "Expected program name to be 'yay'"
+        );
+
+        let aur_args: [&str; 4] = [
+            "-S", "--needed", "quickshell-git", "bibata-cursor-theme-bin"
+        ];
+        assert!(
+            command.get_args().eq(aur_args),
+            "Expected AUR arguments to match"
         )
     }
 }
