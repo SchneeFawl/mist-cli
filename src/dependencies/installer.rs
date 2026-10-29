@@ -211,27 +211,46 @@ use super::*;
         );
 
         let cmd_fail = Command::new("false");
+        let cmd_fail_err = execute_install_command(cmd_fail).unwrap_err();
+        let cmd_fail_message = cmd_fail_err.to_string();
+
+        assert!(
+            cmd_fail_message.contains("false") && cmd_fail_message.contains("exit code 1"),
+            "Expected Display output to contain 'false' and exit code '1'"
+        );
+
         assert!(
             matches!(
-                execute_install_command(cmd_fail),
-                Err(InstallerError::UnsuccessfulExit(program, code)) if {
+                cmd_fail_err,
+                InstallerError::UnsuccessfulExit(program, code) if {
                     program == "false" &&
                     code == Some(1)
                 }
             ),
-            "Expected command to fail"
+            "Expected UnsuccessfulExit with program name 'false' and exit code 1:\n{}",
+            cmd_fail_message
         );
 
         let cmd_nonexistent = Command::new("nonexistent-command");
+        let cmd_nonexistent_err = execute_install_command(cmd_nonexistent).unwrap_err();
+        let cmd_nonexistent_message = cmd_nonexistent_err.to_string();
+
+        assert!(
+            cmd_nonexistent_message.contains("nonexistent-command") &&
+            cmd_nonexistent_message.contains("failed to start"),
+            "Expected Display output to contain 'nonexistent-command':\n{}",
+            cmd_nonexistent_message
+        );
+
         assert!(
             matches!(
-                execute_install_command(cmd_nonexistent),
-                Err(InstallerError::StartingProcess(program, _)) if {
+                cmd_nonexistent_err,
+                InstallerError::StartingProcess(program, _) if {
                     program == "nonexistent-command"
                 }
             ),
-            "Expected command to fail"
-        );
+            "Expected StartingProcess with program name 'nonexistent-command'"
+        )
     }
 
     #[test]
