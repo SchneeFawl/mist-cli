@@ -56,14 +56,23 @@ impl DependencyConfig {
     }
 
     pub fn validate(&self) -> Result<String, CatalogError> {
-        let filtered = self.dependencies
+        let filtered_name = self.dependencies
             .iter()
-            .find(|dep| dep.name.is_empty());
+            .find(|dep| dep.name.trim().is_empty());
 
-        match filtered {
-            Some(_invalid_dep) => Err(CatalogError::InvalidDepName),
-            None => Ok("Dependencies validated".to_string())
-        }
+        if let Some(_) = filtered_name {
+            return Err(CatalogError::InvalidDepName)
+        };
+
+        let filtered_desc = self.dependencies
+            .iter()
+            .find(|dep| dep.description.trim().is_empty());
+
+        if let Some(dep) = filtered_desc {
+            return Err(CatalogError::InvalidDepDesc(dep.name.clone()));
+        };
+
+        Ok("Dependencies validated".to_string())
     }
 
     pub fn count(&self) -> usize {
@@ -74,12 +83,41 @@ impl DependencyConfig {
 #[derive(Debug)]
 pub enum CatalogError {
     InvalidDepName,
+    InvalidDepDesc(String)
 }
 
 impl std::fmt::Display for CatalogError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CatalogError::InvalidDepName => write!(f, "Invalid dependency name"),
+            CatalogError::InvalidDepDesc(pkg_name) => write!(f, "Invalid description found for '{}'", pkg_name)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn whitespace_name_validation() {
+        let dep = Dependency {
+            name: "    ".to_string(),
+            description: "Whitespace named dependency".to_string(),
+            source: PackageSource::Aur
+        };
+
+        let dep_config = DependencyConfig {
+            dependencies: vec![dep]
+        };
+
+        let err = dep_config.validate().unwrap_err();
+        assert!(
+            matches!(
+                err,
+                CatalogError::InvalidDepName
+            ),
+            "Expected InvalidDepName error"
+        )
     }
 }
