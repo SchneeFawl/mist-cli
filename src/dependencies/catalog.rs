@@ -1,4 +1,5 @@
 use serde::{Deserialize};
+use std::collections::HashSet;
 
 const CATALOG: &str = include_str!("dependencies.toml");
 
@@ -118,6 +119,29 @@ mod test {
                 CatalogError::InvalidDepName
             ),
             "Expected InvalidDepName error"
+        )
+    }
+
+    #[test]
+    fn whitespace_description_validation() {
+        let dep_name: String = String::from("invalid-dep");
+        let dep = Dependency {
+            name: dep_name.clone(),
+            description: "      ".to_string(),
+            source: PackageSource::Aur
+        };
+
+        let dep_config = DependencyConfig {
+            dependencies: vec![dep]
+        };
+        let err = dep_config.validate().unwrap_err();
+
+        assert!(
+            matches!(
+                err,
+                CatalogError::InvalidDepDesc(pkg_name) if pkg_name == dep_name
+            ),
+            "Expected InvalidDepDesc error"
         )
     }
 }
