@@ -57,13 +57,20 @@ impl DependencyConfig {
     }
 
     pub fn validate(&self) -> Result<String, CatalogError> {
+        let mut seen: HashSet<String> = HashSet::new();
+        for dep in &self.dependencies {
+            if !seen.insert(dep.name.clone()) {
+                return Err(CatalogError::DuplicatePackage(dep.name.clone()))
+            }
+        };
+
         let filtered_name = self.dependencies
             .iter()
             .find(|dep| dep.name.trim().is_empty());
 
-        if let Some(_) = filtered_name {
+        if filtered_name.is_some() {
             return Err(CatalogError::InvalidDepName)
-        };
+        }
 
         let filtered_desc = self.dependencies
             .iter()
@@ -84,14 +91,16 @@ impl DependencyConfig {
 #[derive(Debug)]
 pub enum CatalogError {
     InvalidDepName,
-    InvalidDepDesc(String)
+    InvalidDepDesc(String),
+    DuplicatePackage(String)
 }
 
 impl std::fmt::Display for CatalogError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CatalogError::InvalidDepName => write!(f, "Invalid dependency name"),
-            CatalogError::InvalidDepDesc(pkg_name) => write!(f, "Invalid description found for '{}'", pkg_name)
+            CatalogError::InvalidDepDesc(name) => write!(f, "Invalid description found for '{}'", name),
+            CatalogError::DuplicatePackage(name) => write!(f, "Duplicate package '{}' found", name)
         }
     }
 }

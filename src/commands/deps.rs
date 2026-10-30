@@ -108,6 +108,7 @@ pub fn plan_install(
     Ok(install_plan)
 }
 
+#[allow(dead_code)]
 pub fn plan_pacman_install(
     packages: &[String],
     installed: &HashSet<String>
