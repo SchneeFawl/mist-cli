@@ -57,13 +57,6 @@ impl DependencyConfig {
     }
 
     pub fn validate(&self) -> Result<String, CatalogError> {
-        let mut seen: HashSet<String> = HashSet::new();
-        for dep in &self.dependencies {
-            if !seen.insert(dep.name.clone()) {
-                return Err(CatalogError::DuplicatePackage(dep.name.clone()))
-            }
-        };
-
         let filtered_name = self.dependencies
             .iter()
             .find(|dep| dep.name.trim().is_empty());
@@ -78,6 +71,13 @@ impl DependencyConfig {
 
         if let Some(dep) = filtered_desc {
             return Err(CatalogError::InvalidDepDesc(dep.name.clone()));
+        };
+
+        let mut seen: HashSet<&str> = HashSet::new();
+        for dep in &self.dependencies {
+            if !seen.insert(&dep.name) {
+                return Err(CatalogError::DuplicatePackage(dep.name.clone()))
+            }
         };
 
         Ok("Dependencies validated".to_string())
@@ -134,13 +134,13 @@ mod test {
     #[test]
     fn whitespace_description_validation() {
         let dep_name: String = String::from("invalid-dep");
-        let dep = Dependency {
+        let dep: Dependency = Dependency {
             name: dep_name.clone(),
             description: "      ".to_string(),
             source: PackageSource::Aur
         };
 
-        let dep_config = DependencyConfig {
+        let dep_config: DependencyConfig = DependencyConfig {
             dependencies: vec![dep]
         };
         let err = dep_config.validate().unwrap_err();
@@ -151,6 +151,33 @@ mod test {
                 CatalogError::InvalidDepDesc(pkg_name) if pkg_name == dep_name
             ),
             "Expected InvalidDepDesc error"
+        )
+    }
+
+    #[test]
+    fn deps_validate_deduplication() {
+        let dep_name: String = String::from("some_package");
+        let dep_1: Dependency = Dependency {
+            name: dep_name.clone(),
+            description: "some_package pacman".to_string(),
+            source: PackageSource::Pacman
+        };
+        let dep_2: Dependency = Dependency {
+            name: dep_name.clone(),
+            description: "some_package AUR".to_string(),
+            source: PackageSource::Aur
+        };
+
+        let dep_config: DependencyConfig = DependencyConfig {
+            dependencies: vec![dep_1, dep_2]
+        };
+
+        let err = dep_config.validate().unwrap_err();
+        assert!(
+            matches!(
+                err,
+                CatalogError::DuplicatePackage(pkg_name) if pkg_name == dep_name
+            )
         )
     }
 }
