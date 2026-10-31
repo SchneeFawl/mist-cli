@@ -1,11 +1,12 @@
 mod cli;
 mod commands;
 mod dependencies;
+mod ui;
 
 use clap::Parser;
-use cli::{Cli};
+use cli::Cli;
 
-use crate::commands::run;
+use crate::{commands::run};
 
 fn main() {
     let cli = Cli::parse();
