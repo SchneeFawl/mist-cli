@@ -155,7 +155,7 @@ mod test {
     }
 
     #[test]
-    fn deps_validate_deduplication() {
+    fn deduplication_validation() {
         let dep_name: String = String::from("some_package");
         let dep_1: Dependency = Dependency {
             name: dep_name.clone(),
