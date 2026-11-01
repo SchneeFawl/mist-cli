@@ -3,13 +3,13 @@ use std::{
 };
 
 use crate::{
-    commands::deps::DepsError::{InstalledPackages, InvalidCatalog, TomlParse, UnknownPackage, Installer},
+    commands::deps::DepsError::{InstalledPackages, Installer, InvalidCatalog, TomlParse, UnknownPackage},
     dependencies::{
-        catalog::{CatalogError, DependencyConfig, PackageSource},
-    installer::{
-        InstalledPackagesError, InstallerError, install_planned_pacman_packages, install_planned_aur_packages,
-        is_installed
-    }}
+        catalog::{CatalogError, Dependency, DependencyConfig, PackageSource}, installer::{
+            InstalledPackagesError, InstallerError, install_planned_aur_packages,
+            install_planned_pacman_packages, is_installed
+        }
+    }
 };
 
 pub fn deps_check() -> Result<(), DepsError> {
@@ -158,6 +158,17 @@ pub fn confirm_install() -> bool {
 pub fn confirm_install_decision(input: &str) -> bool {
     let trimmed = input.trim();
     trimmed.eq_ignore_ascii_case("y") || trimmed.eq_ignore_ascii_case("yes")
+}
+
+#[allow(dead_code)]
+pub fn select_deps(dependencies: &[Dependency], positions: &[usize]) -> Vec<String> {
+    // for index in positions {
+    //     selected.push(dependencies[index.to_owned()].name.clone());
+    // }
+
+    positions.iter()
+        .map(|&index| dependencies[index].name.clone())
+        .collect()
 }
 
 #[derive(Debug)]
@@ -388,5 +399,37 @@ use super::*;
             ),
             "Expected Err(DepsError::UnknownPackage())"
         );
+    }
+
+    #[test]
+    fn deps_selection() {
+        let pkg_a: Dependency = Dependency {
+            name: "pkg-a".to_string(),
+            description: "Pacman package A".to_string(),
+            source: PackageSource::Pacman
+        };
+        let pkg_b: Dependency = Dependency {
+            name: "pkg-b".to_string(),
+            description: "Pacman package B".to_string(),
+            source: PackageSource::Pacman
+        };
+        let pkg_c: Dependency = Dependency {
+            name: "pkg-c".to_string(),
+            description: "AUR package C".to_string(),
+            source: PackageSource::Aur
+        };
+
+        let packages: &[Dependency] = &[
+            pkg_a,
+            pkg_b,
+            pkg_c
+        ];
+        let positions: &[usize] = &[2, 0];
+
+        assert_eq!(
+            select_deps(packages, positions),
+            ["pkg-c".to_string(), "pkg-a".to_string()],
+            "Expected output to match"
+        )
     }
 }
