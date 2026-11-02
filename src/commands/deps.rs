@@ -162,10 +162,6 @@ pub fn confirm_install_decision(input: &str) -> bool {
 
 #[allow(dead_code)]
 pub fn select_deps(dependencies: &[Dependency], positions: &[usize]) -> Vec<String> {
-    // for index in positions {
-    //     selected.push(dependencies[index.to_owned()].name.clone());
-    // }
-
     positions.iter()
         .map(|&index| dependencies[index].name.clone())
         .collect()
