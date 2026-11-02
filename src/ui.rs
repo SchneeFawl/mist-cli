@@ -30,3 +30,35 @@ pub enum PromptOutcome {
     Empty,
     Selected(Vec<usize>)
 }
+
+#[cfg(test)]
+mod test {
+
+use super::*;
+
+    #[test]
+    fn evaluate_selection_empty() {
+        let vector: Vec<usize> = Vec::new();
+        let selection = Ok(Some(vector));
+
+        assert!(
+            matches!(
+                evaluate_selection(selection),
+                PromptOutcome::Empty
+            ),
+            "Expected output to be empty"
+        )
+    }
+
+    #[test]
+    fn evaluate_selection_error() {
+        let err: std::io::Error = std::io::Error::other("terminal unavailable");
+
+        assert!(
+            matches!(
+                evaluate_selection(Err(err.into())),
+                PromptOutcome::Error(dialoguer::Error::IO(_))
+            )
+        )
+    }
+}
