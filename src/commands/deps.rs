@@ -171,6 +171,28 @@ pub fn select_deps(dependencies: &[Dependency], positions: &[usize]) -> Vec<Stri
         .collect()
 }
 
+pub fn deps_interactive_install() -> Result<(), DepsError> {
+    let config = DependencyConfig::load()?;
+    config.validate()?;
+
+    let deps: Vec<String> = config.dependencies
+        .iter()
+        .map(|dep| dep.to_string())         // display string representation
+        .collect();
+
+    match evaluate_selection(select(&deps)) {
+        PromptOutcome::Error(err) => return Err(DepsError::Selection(err)),
+        PromptOutcome::Empty => println!("No dependencies selected"),
+        PromptOutcome::Cancelled => println!("Prompt cancelled, no dependencies selected"),
+        PromptOutcome::Selected(indices) => {
+            let selection = select_deps(&config.dependencies, &indices);
+            deps_install(&selection)?
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 pub struct InstallPlan {
     pub pacman: Vec<String>,
