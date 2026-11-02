@@ -2,7 +2,7 @@ use dialoguer::{MultiSelect};
 
 pub fn select(labels: &[String]) -> Result<Option<Vec<usize>>, dialoguer::Error> {
     MultiSelect::new()
-        .with_prompt("Select labels:")
+        .with_prompt("Select labels")
         .items(labels)
         .interact_opt()
 }

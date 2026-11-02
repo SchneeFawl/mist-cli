@@ -33,11 +33,30 @@ pub enum Commands {
     // Status {}
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, PartialEq, Debug)]
 pub enum DepsCommands {
     Check,
     Install {
-        #[arg(required = true)]
+        #[arg(required = false)]
         packages: Vec<String>
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn deps_install_parse_with_empty_pkg_list() {
+        let args = ["mist-cli", "deps", "install"];
+        let parsed = Cli::try_parse_from(args)
+            .expect("Failed to parse CLI argument");
+
+        assert!(
+            matches!(
+                parsed.command,
+                Commands::Deps { command: arg } if arg == DepsCommands::Install { packages: vec![] }
+            )
+        )
     }
 }

@@ -1,6 +1,9 @@
 pub mod deps;
 
-use crate::{cli::Commands::{Deps, Install}, commands::deps::{DepsError, deps_check, deps_install}};
+use crate::{
+    cli::Commands::{Deps, Install},
+    commands::deps::{DepsError, deps_check, deps_install, deps_interactive_install}
+};
 use crate::{cli::DepsCommands};
 
 pub fn run(command: crate::cli::Commands) -> Result<(), DepsError> {
@@ -10,7 +13,13 @@ pub fn run(command: crate::cli::Commands) -> Result<(), DepsError> {
         }
         Deps { command: subcmd } => match subcmd {
             DepsCommands::Check => deps_check()?,
-            DepsCommands::Install{ packages } => deps_install(&packages)?
+            DepsCommands::Install{ packages } => {
+                if packages.is_empty() {
+                    deps_interactive_install()?
+                } else {
+                    deps_install(&packages)?
+                }
+            }
         }
     }
     Ok(())
