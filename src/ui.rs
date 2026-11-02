@@ -23,7 +23,6 @@ pub fn evaluate_selection(
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum PromptOutcome {
     Error(dialoguer::Error),

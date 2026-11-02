@@ -3,12 +3,17 @@ use std::{
 };
 
 use crate::{
-    commands::deps::DepsError::{InstalledPackages, Installer, InvalidCatalog, TomlParse, UnknownPackage},
+    commands::deps::DepsError::{
+        InstalledPackages, Installer, InvalidCatalog, TomlParse, UnknownPackage, Selection
+    },
     dependencies::{
         catalog::{CatalogError, Dependency, DependencyConfig, PackageSource}, installer::{
             InstalledPackagesError, InstallerError, install_planned_aur_packages,
             install_planned_pacman_packages, is_installed
         }
+    },
+    ui::{
+        PromptOutcome, select, evaluate_selection
     }
 };
 
@@ -160,7 +165,6 @@ pub fn confirm_install_decision(input: &str) -> bool {
     trimmed.eq_ignore_ascii_case("y") || trimmed.eq_ignore_ascii_case("yes")
 }
 
-#[allow(dead_code)]
 pub fn select_deps(dependencies: &[Dependency], positions: &[usize]) -> Vec<String> {
     positions.iter()
         .map(|&index| dependencies[index].name.clone())
@@ -179,7 +183,8 @@ pub enum DepsError {
     InvalidCatalog(CatalogError),
     UnknownPackage(String),
     InstalledPackages(InstalledPackagesError),
-    Installer(InstallerError)
+    Installer(InstallerError),
+    Selection(dialoguer::Error)
 }
 
 impl std::fmt::Display for DepsError {
@@ -189,7 +194,8 @@ impl std::fmt::Display for DepsError {
             InvalidCatalog(err) => writeln!(f, "Dependency catalog validation failed\n {err}"),
             UnknownPackage(err) => write!(f, "Found unknown package '{}'", err),
             InstalledPackages(err) => write!(f, "Failed to query installed packages\n {}", err),
-            Installer(err) => write!(f, "Failed to install planned packages\n {}", err)
+            Installer(err) => write!(f, "Failed to install planned packages\n {}", err),
+            Selection(err) => write!(f, "Failed to read dependency selection\n {}", err)
         }
     }
 }
@@ -215,6 +221,12 @@ impl From<InstalledPackagesError> for DepsError {
 impl From<InstallerError> for DepsError {
     fn from(error: InstallerError) -> Self {
         DepsError::Installer(error)
+    }
+}
+
+impl From<dialoguer::Error> for DepsError {
+    fn from(error: dialoguer::Error) -> Self {
+        DepsError::Selection(error)
     }
 }
 
