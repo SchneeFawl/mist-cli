@@ -50,12 +50,30 @@ mod test {
     fn deps_install_parse_with_empty_pkg_list() {
         let args = ["mist-cli", "deps", "install"];
         let parsed = Cli::try_parse_from(args)
-            .expect("Failed to parse CLI argument");
+            .expect("Failed to parse CLI arguments");
 
         assert!(
             matches!(
                 parsed.command,
                 Commands::Deps { command: arg } if arg == DepsCommands::Install { packages: vec![] }
+            )
+        )
+    }
+
+    #[test]
+    fn deps_install_parse_with_non_empty_pkg_list() {
+        let args = ["mist-cli", "deps", "install", "hyprland", "kitty"];
+        let parsed = Cli::try_parse_from(args)
+            .expect("Failed to parse CLI arguments");
+
+        assert!(
+            matches!(
+                parsed.command,
+                Commands::Deps { command: arg } if {
+                    arg == DepsCommands::Install { packages: vec![
+                        "hyprland".to_string(), "kitty".to_string()
+                    ] }
+                }
             )
         )
     }
