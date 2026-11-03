@@ -113,23 +113,6 @@ pub fn plan_install(
     Ok(install_plan)
 }
 
-#[allow(dead_code)]
-pub fn plan_pacman_install(
-    packages: &[String],
-    installed: &HashSet<String>
-) -> Result<Vec<String>, DepsError> {
-    let mut plan: Vec<String> = Vec::new();
-    let mut seen: HashSet<String> = HashSet::new();
-
-    for package in packages {
-        if !installed.contains(package) && seen.insert(package.clone()) {
-            plan.push(package.clone());
-        }
-    }
-
-    Ok(plan)
-}
-
 pub fn check_packages(packages: &[String], config: &DependencyConfig) -> Result<(), DepsError> {
     for package in packages {
         match config.find(package) {
@@ -320,30 +303,6 @@ use super::*;
                 "Expected DepsError::InvalidCatalog(CatalogError::InvalidDepName) but got {:?}", &deps_error
             )
         }
-    }
-
-    #[test]
-    fn plan_pacman_install_deduplication_and_missing() {
-        let mut installed: HashSet<String> = HashSet::new();
-        installed.insert("hyprland".to_string());
-
-        let requested = vec![
-            "hyprland".to_string(),
-            "kitty".to_string(),
-            "kitty".to_string()
-        ];
-
-        let plan = plan_pacman_install(&requested, &installed)
-            .expect("Expected planning to succeed");
-
-        // deduplicates "kitty", "hyprland" is filtered
-        assert_eq!(plan, vec!["kitty".to_string()]);
-
-        // if all packages are installed
-        installed.insert("kitty".to_string());
-        let all_installed_plan = plan_pacman_install(&requested, &installed)
-            .expect("Expected planning to succeed");
-        assert!(all_installed_plan.is_empty())
     }
 
     #[test]

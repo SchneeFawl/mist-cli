@@ -19,7 +19,6 @@ impl std::fmt::Display for PackageSource {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct Dependency {
     pub name: String,
